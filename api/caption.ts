@@ -63,9 +63,9 @@ export async function POST(request: Request) {
 
     if (!file) {
       return new Response(
-        JSON.stringify({ error: "No image file provided"})
+        JSON.stringify({ error: "No image file provided"}),
         { status: 400, headers: { 'content-type': 'application/json' } }
-    )
+    )};
 
     const { base64, mimeType } = await convertFileToBase64(file);
     const caption = await generateImageCaption(base64, mimeType);
