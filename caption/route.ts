@@ -1,0 +1,83 @@
+// api/caption/route.ts
+export const runtime = 'nodejs';          // use Node.js, not Edge
+export const dynamic = 'force-dynamic';   // ensure server execution
+
+import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
+
+const getOpenAIClient = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY environment variable is required');
+  }
+
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+};
+
+export async function generateImageCaption(base64Image: string, mimeType: string): Promise<string> {
+  const openai = getOpenAIClient();
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-5-nano',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Your goal is to generate short, descriptive captions for images. Provided with an image provide a caption for the image that captures the most important information.',
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${base64Image}`,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  const caption = response.choices[0]?.message?.content;
+
+  if (!caption) {
+    throw new Error('Failed to generate caption');
+  }
+
+  return caption;
+}
+
+async function convertFileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const base64 = buffer.toString('base64');
+  const mimeType = file.type || 'image/jpeg';
+
+  return { base64, mimeType };
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('image') as File;
+
+    if (!file) {
+      return NextResponse.json(
+        { error: 'No image file provided' },
+        { status: 400 }
+      );
+    }
+
+    const { base64, mimeType } = await convertFileToBase64(file);
+    const caption = await generateImageCaption(base64, mimeType);
+
+    return NextResponse.json({ caption });
+  } catch (error) {
+    console.error('Error generating caption:', error);
+    return NextResponse.json(
+      { error: 'Failed to process image' },
+      { status: 500 }
+    );
+  }
+}
