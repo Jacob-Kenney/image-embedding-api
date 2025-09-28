@@ -2,7 +2,6 @@
 export const runtime = 'nodejs';          // use Node.js, not Edge
 export const dynamic = 'force-dynamic';   // ensure server execution
 
-import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 const getOpenAIClient = () => {
@@ -57,27 +56,29 @@ async function convertFileToBase64(file: File): Promise<{ base64: string; mimeTy
   return { base64, mimeType };
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('image') as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: 'No image file provided' },
-        { status: 400 }
-      );
-    }
+      return new Response(
+        JSON.stringify({ error: "No image file provided"})
+        { status: 400, headers: { 'content-type': 'application/json' } }
+    )
 
     const { base64, mimeType } = await convertFileToBase64(file);
     const caption = await generateImageCaption(base64, mimeType);
 
-    return NextResponse.json({ caption });
+    return new Response(JSON.stringify(caption), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+    });
   } catch (error) {
     console.error('Error generating caption:', error);
-    return NextResponse.json(
-      { error: 'Failed to process image' },
-      { status: 500 }
+    return new Response(
+        JSON.stringify({ error: 'Failed to process image' }),
+        { status: 500, headers: { 'content-type': 'application/json' } }
     );
   }
 }
