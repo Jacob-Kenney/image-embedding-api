@@ -18,6 +18,7 @@
   "homepage": "https://github.com/Jacob-Kenney/image-embedding-api#readme",
   "dependencies": {
     "@xenova/transformers": "^2.17.2",
-    "openai": "^5.23.1"
+    "openai": "^5.23.1",
+    "sharp": "^0.33.0"
   }
 }
