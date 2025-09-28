@@ -1,0 +1,204 @@
+openapi: 3.0.3
+info:
+  title: Mirror Embedding API
+  description: The mirror embedding API with serverless functions for image processing, captioning, and embeddings
+  version: 1.0.0
+  contact:
+    name: Jacob
+  license:
+    name: ISC
+servers:
+  - url: /api
+    description: API base path
+paths:
+  /embed:
+    post:
+      summary: Generate embeddings for text and/or images
+      description: Generate CLIP embeddings for text content and/or images using the Xenova/clip-vit-base-patch16 model
+      tags:
+        - Embeddings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Text content to generate embeddings for
+                  example: "A beautiful sunset over the ocean"
+                image_url:
+                  type: string
+                  format: uri
+                  description: Public URL of an image to generate embeddings for
+                  example: "https://example.com/image.jpg"
+                image_base64:
+                  type: string
+                  description: Base64 encoded image data (without data URL prefix)
+                  example: "/9j/4AAQSkZJRgABAQAAAQABAAD/..."
+              minProperties: 1
+              additionalProperties: false
+            examples:
+              text_only:
+                summary: Text embedding only
+                value:
+                  text: "A beautiful sunset over the ocean"
+              image_url_only:
+                summary: Image embedding from URL
+                value:
+                  image_url: "https://example.com/image.jpg"
+              image_base64_only:
+                summary: Image embedding from base64
+                value:
+                  image_base64: "/9j/4AAQSkZJRgABAQAAAQABAAD/..."
+              both:
+                summary: Both text and image embeddings
+                value:
+                  text: "A beautiful sunset"
+                  image_url: "https://example.com/sunset.jpg"
+      responses:
+        '200':
+          description: Successfully generated embeddings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text_embedding:
+                    type: array
+                    items:
+                      type: number
+                    description: Text embedding vector (512 dimensions)
+                    example: [0.1, -0.2, 0.3, "..."]
+                  image_embedding:
+                    type: array
+                    items:
+                      type: number
+                    description: Image embedding vector (512 dimensions)
+                    example: [0.4, -0.1, 0.7, "..."]
+        '400':
+          description: Bad request - missing required parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Provide text, image_url, or image_base64."
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Failed to produce CLIP embeddings"
+
+  /describe:
+    post:
+      summary: Generate detailed image descriptions
+      description: Generate detailed descriptions of uploaded images using OpenAI's GPT-5-nano model
+      tags:
+        - Image Analysis
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file to analyze and describe
+              required:
+                - image
+      responses:
+        '200':
+          description: Successfully generated image description
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Detailed description of the image
+                example: "The image shows a vibrant sunset over a calm ocean with orange and pink hues reflecting on the water surface. Palm trees are silhouetted against the sky on the left side of the frame."
+        '400':
+          description: Bad request - no image file provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "No image file provided"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Failed to process image"
+
+  /caption:
+    post:
+      summary: Generate short image captions
+      description: Generate concise, descriptive captions for uploaded images using OpenAI's GPT-5-nano model
+      tags:
+        - Image Analysis
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file to caption
+              required:
+                - image
+      responses:
+        '200':
+          description: Successfully generated image caption
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Short, descriptive caption of the image
+                example: "Sunset over ocean with palm trees"
+        '400':
+          description: Bad request - no image file provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "No image file provided"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Failed to process image"
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message describing what went wrong
+      required:
+        - error
+      example:
+        error: "An error occurred while processing the request"
+
+tags:
+  - name: Embeddings
+    description: Operations for generating text and image embeddings
+  - name: Image Analysis
+    description: Operations for analyzing and describing images
